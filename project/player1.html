@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login/Register and HLS Player</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Quicksand", sans-serif; }
+        
+    
+        body {
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+           
+            background: linear-gradient(-45deg, #0a192f, #0072ff, #00c6ff, #0a192f);
+            background-size: 400% 400%;
+            animation: gradientAnimation 15s ease infinite;
+        }
+
+        @keyframes gradientAnimation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .ring { position: relative; width: 500px; height: 500px; display: flex; justify-content: center; align-items: center; }
+        .ring i { position: absolute; inset: 0; border: 2px solid #fff; transition: 0.5s; }
+        .ring i:nth-child(1) { border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%; animation: animate 6s linear infinite; }
+        .ring i:nth-child(2) { border-radius: 41% 44% 56% 59%/38% 62% 63% 37%; animation: animate 4s linear infinite; }
+        .ring i:nth-child(3) { border-radius: 41% 44% 56% 59%/38% 62% 63% 37%; animation: animate2 10s linear infinite; }
+        .ring:hover i { border: 6px solid var(--clr); filter: drop-shadow(0 0 20px var(--clr)); }
+        
+        .form-container { position: absolute; width: 300px; height: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
+        .form-container h2 { font-size: 2em; color: #fff; }
+        .form-container .inputBx { position: relative; width: 100%; }
+        .form-container .inputBx input { width: 100%; padding: 12px 20px; background: transparent; border: 2px solid #fff; border-radius: 40px; font-size: 1.2em; color: #fff; outline: none; }
+        .form-container .inputBx button { width: 100%; padding: 12px 20px; background: linear-gradient(45deg, #008cff, #44ffe6); border: none; border-radius: 40px; font-size: 1.2em; color: #111; cursor: pointer; font-weight: bold; }
+        .form-container form { width: 100%; display: flex; flex-direction: column; gap: 15px; }
+
+        .links { margin-top: 10px; }
+        .links a { color: #fff; text-decoration: none; font-size: 0.9em; cursor: pointer; }
+        .links a:hover { color: #fff172; }
+        .message { color: #f9f6f6; margin-top: 10px; min-height: 20px; text-align: center; }
+        
+        #registerSection { display: none; } 
+
+    
+        #videoSection { display: none; max-width: 1200px; margin: 0 auto; padding: 20px; text-align: center; }
+        .video-container { background: #000; border-radius: 8px; overflow: hidden; margin-top: 20px; }
+        #videoPlayer { width: 100%; }
+        .controls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
+        .controls button, .controls select { padding: 10px 15px; background: linear-gradient(45deg, #008cff, #44ffe6); border: none; border-radius: 5px; cursor: pointer; color: #111; font-weight: bold; }
+        .player-info { margin-top: 10px; font-size: 14px; color: #aaa; }
+
+        @keyframes animate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes animate2 { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
+    </style>
+</head>
+<body>
+    <div class="ring">
+        <i style="--clr:#3712db;"></i>
+        <i style="--clr:#008cff;"></i>
+        <i style="--clr:#1eccfc;"></i>
+
+        <div class="form-container" id="loginSection">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div class="inputBx"><input type="text" id="username" placeholder="Username" required></div>
+                <div class="inputBx"><input type="password" id="password" placeholder="Password" required></div>
+                <div class="inputBx"><button type="submit">Sign In</button></div>
+            </form>
+            <p class="message" id="loginMessage"></p>
+            <div class="links">
+                <a id="showRegisterLink">Don't have an account? Sign Up</a>
+            </div>
+        </div>
+
+        <div class="form-container" id="registerSection">
+            <h2>Sign Up</h2>
+            <form id="registerForm">
+                <div class="inputBx"><input type="text" id="regUsername" placeholder="Username" required></div>
+                <div class="inputBx"><input type="password" id="regPassword" placeholder="Password" required></div>
+                <div class="inputBx"><button type="submit">Create Account</button></div>
+            </form>
+            <p class="message" id="registerMessage"></p>
+            <div class="links">
+                <a id="showLoginLink">Already have an account? Login</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="videoSection">
+        <h1>PlayZone</h1>
+        <div class="video-container">
+            <video id="videoPlayer" controls></video>
+        </div>
+        <div class="controls">
+            <button class="video-btn" data-manifest="/hls/master1.m3u8">Video 1</button>
+            <button class="video-btn" data-manifest="/hls/master2.m3u8">Video 2</button>
+            <button class="video-btn" data-manifest="/hls/master3.m3u8">Video 3</button>
+            <select id="qualitySelector">
+                <option value="-1">Auto</option>
+            </select>
+        </div>
+    </div>
+    
+    <script>
+        // --- Get All Elements ---
+        const loginSection = document.getElementById('loginSection');
+        const registerSection = document.getElementById('registerSection');
+        const videoSection = document.getElementById('videoSection');
+        
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        
+        const showRegisterLink = document.getElementById('showRegisterLink');
+        const showLoginLink = document.getElementById('showLoginLink');
+        
+        const loginMessage = document.getElementById('loginMessage');
+        const registerMessage = document.getElementById('registerMessage');
+
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoButtons = document.querySelectorAll('.video-btn');
+        const qualitySelector = document.getElementById('qualitySelector');
+        
+        let jwtToken = null;
+        let hls = null;
+
+        // --- Toggle Forms ---
+        showRegisterLink.addEventListener('click', () => {
+            loginSection.style.display = 'none';
+            registerSection.style.display = 'flex';
+        });
+
+        showLoginLink.addEventListener('click', () => {
+            registerSection.style.display = 'none';
+            loginSection.style.display = 'flex';
+        });
+
+        // --- Register Handler ---
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value;
+            const password = document.getElementById('regPassword').value;
+            registerMessage.textContent = 'Creating account...';
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    registerMessage.textContent = 'Account created! Please log in.';
+                    setTimeout(() => {
+                        registerSection.style.display = 'none';
+                        loginSection.style.display = 'flex';
+                        registerMessage.textContent = '';
+                    }, 2000);
+                } else {
+                    registerMessage.textContent = data.message || 'Registration failed';
+                }
+            } catch (error) {
+                registerMessage.textContent = 'Network error occurred';
+            }
+        });
+
+        // --- Login Handler ---
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            loginMessage.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    jwtToken = data.token;
+                    document.querySelector('.ring').style.display = 'none';
+                    videoSection.style.display = 'block';
+                    initializePlayer();
+                } else {
+                    loginMessage.textContent = data.message || 'Login failed';
+                }
+            } catch (error) {
+                loginMessage.textContent = 'Network error occurred';
+            }
+        });
+        
+        // --- HLS Player Functions ---
+       function initializePlayer() {
+            if (Hls.isSupported()) {
+                hls = new Hls({
+                    // تفعيل وضع التصحيح لطباعة معلومات مفيدة في الكونسول
+                    debug: true 
+                });
+
+                // هذا الجزء يضيف توكن المصادقة لكل طلب
+                // تم نقله هنا ليكون منفصلاً وواضحاً
+                hls.config.xhrSetup = function (xhr, url) {
+                    if (jwtToken) {
+                        xhr.setRequestHeader('Authorization', `Bearer ${jwtToken}`);
+                    }
+                };
+                
+                hls.attachMedia(videoPlayer);
+
+                // هذا الكود يراقب أي محاولة لتغيير الجودة ويطبعها في الكونسول
+                hls.on(Hls.Events.LEVEL_SWITCHING, function (event, data) {
+                    console.log("HLS.js is switching quality level to:", data.level, "Bitrate:", data.bitrate);
+                });
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                    qualitySelector.innerHTML = '<option value="-1">Auto</option>';
+                    
+                    // فرز الجودات من الأعلى للأقل
+                    const sortedLevels = [...data.levels].sort((a, b) => b.height - a.height);
+
+                    sortedLevels.forEach((level) => {
+                        const option = document.createElement('option');
+                        // نستخدم فهرس المستوى الأصلي لضمان التوافق
+                        const originalIndex = data.levels.indexOf(level);
+                        option.value = originalIndex;
+
+                        // تعديل منطق التسمية ليشمل جميع الجودات
+                        let label = `${level.height}p`; // اسم مبدئي مثل "720p"
+                        if(level.height >= 720) {
+                           label += ' (HD)';
+                        } else {
+                           label += ' (SD)';
+                        }
+                        
+                        option.textContent = label;
+                        qualitySelector.appendChild(option);
+                    });
+                });
+
+            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                // Fallback for native HLS support (e.g., Safari)
+                videoPlayer.src = '/hls/master1.m3u8';
+            }
+        }
+
+        // --- Video Selection Handler ---
+        videoButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!hls) return;
+                const manifestUrl = btn.getAttribute('data-manifest');
+                hls.loadSource(manifestUrl);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    videoPlayer.play();
+                });
+            });
+        });
+
+        // --- Manual Quality Selection Handler ---
+        qualitySelector.addEventListener('change', () => {
+            if (hls) {
+                hls.currentLevel = parseInt(qualitySelector.value);
+            }
+        });
+    </script>
+</body>
+</html>
