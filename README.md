@@ -1,5 +1,4 @@
 ---
-# Web-application-for-streaming-multimedia-using-QUIC-and-HTTP3
 ```markdown
 #  Secure Video Streaming Web App with JWT Authentication and HLS
 
