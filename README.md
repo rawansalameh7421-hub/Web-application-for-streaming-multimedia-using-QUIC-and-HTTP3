@@ -1,4 +1,3 @@
----
 ```markdown
 #  Secure Video Streaming Web App with JWT Authentication and HLS
 
